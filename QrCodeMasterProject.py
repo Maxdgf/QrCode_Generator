@@ -24,9 +24,9 @@ class App(ctk.CTk):
         self.title("Генератор QR-кодов")    
         self.geometry("800x600")
         self.icon_path = os.path.join(os.path.dirname(__file__), 'qrCodeLogo.ico')
+        #self.icon_path = self.resource_path("qrCodeLogo.ico")
         self.iconbitmap(self.icon_path)
         self.resizable(0, 0)
-
 #Window setup----------------------------------------------------------------------------------
 
 #UI area-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class App(ctk.CTk):
         self.labelNameFrame.pack(anchor="ne", padx=5, pady=10)
 
         self.switchVar = ctk.StringVar(value="off")
-        self.switchTheme = ctk.CTkSwitch(self, text="темная/светлая тема", fg_color="#1E90FF", command=self.switch_theme, variable=self.switchVar, onvalue="on", offvalue="off")
+        self.switchTheme = ctk.CTkSwitch(self, text="темная/светлая тема", fg_color="#1E90FF", command=self.switch_theme, variable=self.switchVar, onvalue="on", offvalue="off", progress_color="#00BFFF", button_color="#FFFFFF")
         self.switchTheme.place(x=0, y=0)
 
         self.urlFrame = ctk.CTkFrame(self.widgetFrame)
@@ -72,6 +72,13 @@ class App(ctk.CTk):
 
         self.nameLabel = ctk.CTkLabel(self.colorfulQRParametersFrame, text="Параметры📋", font=("Arial", 15))
         self.nameLabel.pack(anchor="center")
+
+        self.formatFrame = ctk.CTkFrame(self.colorfulQRParametersFrame)
+        self.descLabel4 = ctk.CTkLabel(self.formatFrame, text="форматы файла:", text_color="#00BFFF", font=("Arial", 15))
+        self.descLabel4.pack(side="left", padx=2)
+        self.selectFormat = ctk.CTkComboBox(self.formatFrame, values=[".png", ".jpg", ".jpeg", ".bmp"], border_color="#00BFFF", border_width=3, button_color="#1E90FF", button_hover_color="#00BFFF", dropdown_fg_color="#1E90FF", dropdown_hover_color="#00BFFF")
+        self.selectFormat.pack(side="left", padx=2)
+        self.formatFrame.pack(pady=10, anchor="ne")
 
         self.maskFrame = ctk.CTkFrame(self.colorfulQRParametersFrame)
         self.descLabel5 = ctk.CTkLabel(self.maskFrame, text="паттерны узора:", text_color="#00BFFF", font=("Arial", 15))
@@ -134,6 +141,8 @@ class App(ctk.CTk):
         self.borderQRFrame.pack(pady=10, anchor="ne")
         
         self.qrCode = ctk.CTkImage(light_image=Image.open(self.resource_path("canvas.png")), dark_image=Image.open(self.resource_path("canvas.png")), size=(200, 200))
+        self.fileNameCaption = ctk.CTkLabel(self.qrCodeViewFrame, text="")
+        self.fileNameCaption.pack(anchor="n")
         self.qrCodeLabel = ctk.CTkLabel(self.qrCodeViewFrame, image=self.qrCode, text="")
         self.qrCodeLabel.pack(expand=True)
         self.qrCaption = ctk.CTkLabel(self.qrCodeViewFrame, text="")
@@ -155,6 +164,7 @@ class App(ctk.CTk):
 
 #Functions area---------------------------------------------------------------------------------------------------------------------------------------------------------------------------   
     def resource_path(self, relative_path):
+        #special method for load additional files into .exe
         try:
             base_path = sys._MEIPASS
         except Exception:
@@ -163,6 +173,7 @@ class App(ctk.CTk):
         return os.path.join(base_path, relative_path)    
     
     def view_qr(self):
+        #crossplatform view image method
         if len(self.path) != 0:
             if platform.system() == "Windows":
                 os.startfile(self.path)
@@ -220,8 +231,9 @@ class App(ctk.CTk):
         except:
             messagebox.showerror("Ошибка", "Путь не найден! Попробуйте еще раз.")
 
-    #создание qr кода
+    #creating QR-code
     def create_qr_code(self):
+        #setup important data--------------------------------
         self.link = self.NameString.get()
         self.name = self.filenameString.get()
         if len(self.name) == 0:
@@ -229,8 +241,11 @@ class App(ctk.CTk):
         self.size = self.slider.get()
         self.border = self.slider2.get()
         self.mask = self.selectMask.get()
+        self.format = self.selectFormat.get()
     
         self.maskValue = 0
+        self.formatValue = ".png"
+
         match self.mask:
             case "паттерн 000":
                 self.maskValue = 0
@@ -255,17 +270,60 @@ class App(ctk.CTk):
 
             case "паттерн 111":
                 self.maskValue = 7
+        #setup important data--------------------------------        
 
+        #QR-code generating process logic------------------------------------------------------------------------------------------------------------------------------------------
         try:
             self.qr_code = segno.make(self.link, mask=self.maskValue)
-            self.path = f"{self.file_path}/{self.name}.png"
 
-            self.qr_code.save(self.path, scale=int(self.size), border=int(self.border), light=self.backcolor[1], dark=self.fillcolor[1], quiet_zone=self.bordercolor[1])
+            match self.format:
+                case ".png":
+                    self.path = f"{self.file_path}/{self.name}.png"
+                    self.qr_code.save(self.path, scale=int(self.size), border=int(self.border), light=self.backcolor[1], dark=self.fillcolor[1], quiet_zone=self.bordercolor[1])
+
+                case ".jpg":
+                    self.path = f"{self.file_path}/{self.name}.png"
+                    self.qr_code.save(self.path, scale=int(self.size), border=int(self.border), light=self.backcolor[1], dark=self.fillcolor[1], quiet_zone=self.bordercolor[1])
+
+                    self.jpg_path = f"{self.file_path}/{self.name}.jpg"
+
+                    with Image.open(self.path) as img:
+                        self.rgb_image = img.convert("RGB")
+                        self.rgb_image.save(self.jpg_path, "JPEG")
+
+                    os.remove(f"{self.file_path}/{self.name}.png")
+                    self.path = self.jpg_path
+
+                case ".jpeg":
+                    self.path = f"{self.file_path}/{self.name}.png"
+                    self.qr_code.save(self.path, scale=int(self.size), border=int(self.border), light=self.backcolor[1], dark=self.fillcolor[1], quiet_zone=self.bordercolor[1])
+
+                    self.jpeg_path = f"{self.file_path}/{self.name}.jpeg"
+
+                    with Image.open(self.path) as img:
+                        self.rgb_image = img.convert("RGB")
+                        self.rgb_image.save(self.jpeg_path, "JPEG")
+
+                    os.remove(f"{self.file_path}/{self.name}.png")
+                    self.path = self.jpeg_path
+
+                case ".bmp":
+                    self.path = f"{self.file_path}/{self.name}.png"
+                    self.qr_code.save(self.path, scale=int(self.size), border=int(self.border), light=self.backcolor[1], dark=self.fillcolor[1], quiet_zone=self.bordercolor[1])
+
+                    self.bmp_path = f"{self.file_path}/{self.name}.bmp"
+
+                    with Image.open(self.path) as img:
+                        img.save(self.bmp_path, "BMP")
+
+                    os.remove(f"{self.file_path}/{self.name}.png")
+                    self.path = self.bmp_path
 
             self.image = Image.open(f"{self.path}")
             self.width, self.height = self.image.size
             self.qrCode = ctk.CTkImage(light_image=self.image, dark_image=self.image, size=(200, 200))
             self.qrCodeLabel.configure(image=self.qrCode)
+            self.fileNameCaption.configure(text=self.path)
             self.qrCaption.configure(text=f"{self.width}px x {self.height}px")
 
             if len(self.link) == 0:
@@ -273,6 +331,7 @@ class App(ctk.CTk):
                 messagebox.showwarning("Внимание", "Отсутствует ссылка на ресурс! QR-код невозможно прочесть.")
                 time.sleep(0.5)
                 self.NameString.configure(border_color="#00BBFB")
+
         except Exception as e:
             self.NameString.configure(border_color="#ff0000")
             self.filenameString.configure(border_color="#ff0000")
@@ -280,12 +339,13 @@ class App(ctk.CTk):
 
             self.colorfulQRParametersFrame.configure(border_color="#ff0000", border_width=5)
             #print(e)
-            messagebox.showerror("Ошибка", "Пожалуйста, проверьте правильность и заполнение параметров и повторите генерацию еще раз.")
+            messagebox.showerror("Ошибка", "Что-то пошло не так! :( \nПожалуйста, проверьте правильность и заполнение параметров и повторите генерацию еще раз.")
             time.sleep(0.5)
             self.colorfulQRParametersFrame.configure(border_width=0)
             self.NameString.configure(border_color="#00BBFB")
             self.filenameString.configure(border_color="#00BBFB")
             self.filePathFrame.configure(border_width=0)
+        #QR-code generating process logic------------------------------------------------------------------------------------------------------------------------------------------    
 
     def paste_text(self):
         self.text = self.clipboard_get()
@@ -294,6 +354,6 @@ class App(ctk.CTk):
 #Functions area----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
              
 if __name__ == "__main__":
-    #запуск программы
+    #App launching
     app = App()
     app.mainloop()  
